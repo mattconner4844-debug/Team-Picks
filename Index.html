@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Team List</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f5f5f3;
+    color: #1a1a1a;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+  .container { width: 100%; max-width: 520px; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .sub { font-size: 14px; color: #666; margin-bottom: 24px; line-height: 1.5; }
+  label { font-size: 13px; color: #555; display: block; margin-bottom: 4px; }
+  input, textarea, select {
+    display: block; width: 100%;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 9px 11px; font-size: 14px;
+    background: #fff; color: #1a1a1a;
+    font-family: inherit;
+    outline: none;
+    margin-bottom: 4px;
+    transition: border-color 0.15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+  input:focus, textarea:focus, select:focus { border-color: #999; }
+  input.invalid { border-color: #e05c5c; }
+  textarea { resize: vertical; min-height: 120px; margin-bottom: 14px; }
+  .field-wrap { margin-bottom: 14px; }
+  .field-hint { font-size: 11px; color: #aaa; margin-top: 4px; }
+  .field-hint.err { color: #c0392b; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  button.primary {
+    background: #1a1a1a; color: #fff;
+    border: none; border-radius: 8px;
+    padding: 10px 20px; font-size: 14px; font-weight: 500;
+    cursor: pointer; font-family: inherit; width: 100%;
+    transition: opacity 0.15s;
+  }
+  button.primary:hover { opacity: 0.85; }
+  button.primary:disabled { opacity: 0.35; cursor: default; }
+  .card {
+    background: #fff;
+    border: 1px solid #e8e8e6;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 16px;
+  }
+  .status {
+    font-size: 13px; margin-top: 10px; padding: 8px 12px;
+    border-radius: 6px; display: none;
+  }
+  .status.ok  { display: block; background: #edf7f0; color: #1d6b3a; }
+  .status.err { display: block; background: #fdf0f0; color: #9b2a2a; }
+  .section-label { font-size: 13px; color: #777; margin-bottom: 10px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .person-card {
+    background: #fff; border: 1px solid #e8e8e6;
+    border-radius: 8px; padding: 10px 12px;
+  }
+  .person-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
+  .person-date { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+  .team-item { font-size: 13px; color: #555; margin: 2px 0; }
+  .ghost-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 12px; color: #aaa; font-family: inherit;
+    padding: 0; margin-top: 4px;
+  }
+  .ghost-btn:hover { color: #666; }
+  .hint { font-size: 12px; color: #aaa; margin-top: -10px; margin-bottom: 14px; line-height: 1.5; }
+  #setupView, #mainView { display: none; }
+  #setupView.active, #mainView.active { display: block; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- SETUP VIEW -->
+  <div id="setupView">
+    <h1 style="margin-bottom:8px;">Connect your Google Sheet</h1>
+    <p class="sub">Paste your Google Apps Script web app URL to link submissions to your sheet.</p>
+    <div class="card">
+      <label>Apps Script web app URL</label>
+      <input type="text" id="urlInput" placeholder="https://script.google.com/macros/s/..." />
+      <p class="hint">Should start with https://script.google.com/macros/s/ and end with /exec</p>
+      <button class="primary" id="saveBtn" disabled>Save and continue</button>
+      <div class="status" id="setupStatus"></div>
+    </div>
+  </div>
+
+  <!-- MAIN VIEW -->
+  <div id="mainView">
+    <h1 style="margin-bottom:16px;">Daily team list</h1>
+    <div class="card">
+      <div class="row">
+        <div class="field-wrap">
+          <label>Name</label>
+          <select id="nameField">
+            <option value="">— Select —</option>
+            <option value="Matt">Matt</option>
+            <option value="Walker">Walker</option>
+            <option value="Karson">Karson</option>
+            <option value="Jordan">Jordan</option>
+            <option value="Jake">Jake</option>
+            <option value="Alex">Alex</option>
+          </select>
+        </div>
+        <div class="field-wrap">
+          <label>Date</label>
+          <input type="text" id="dateField" placeholder="3/26/2026" maxlength="10" />
+          <p class="field-hint" id="dateHint">Format: M/D/YYYY</p>
+        </div>
+      </div>
+      <label>Team names (one per line)</label>
+      <textarea id="teamsField" placeholder="Team Alpha&#10;Team Bravo&#10;Team Charlie"></textarea>
+      <button class="primary" id="submitBtn" disabled>Submit to sheet</button>
+      <div class="status" id="submitStatus"></div>
+    </div>
+
+    <div id="subsSection" style="display:none;">
+      <p class="section-label">Recent submissions</p>
+      <div class="grid" id="subsGrid"></div>
+    </div>
+
+    <button class="ghost-btn" id="changeUrlBtn">Change sheet URL</button>
+  </div>
+
+</div>
+<script>
+  const SCRIPT_URL_KEY = 'teamlist_script_url';
+  const SUBS_KEY = 'teamlist_submissions';
+
+  const now = new Date();
+  const todayStr = (now.getMonth() + 1) + '/' + now.getDate() + '/' + now.getFullYear();
+
+  const setupView    = document.getElementById('setupView');
+  const mainView     = document.getElementById('mainView');
+  const urlInput     = document.getElementById('urlInput');
+  const saveBtn      = document.getElementById('saveBtn');
+  const nameField    = document.getElementById('nameField');
+  const dateField    = document.getElementById('dateField');
+  const dateHint     = document.getElementById('dateHint');
+  const teamsField   = document.getElementById('teamsField');
+  const submitBtn    = document.getElementById('submitBtn');
+  const submitStatus = document.getElementById('submitStatus');
+  const subsSection  = document.getElementById('subsSection');
+  const subsGrid     = document.getElementById('subsGrid');
+  const changeUrlBtn = document.getElementById('changeUrlBtn');
+
+  let scriptUrl   = localStorage.getItem(SCRIPT_URL_KEY) || '';
+  let submissions = JSON.parse(localStorage.getItem(SUBS_KEY) || '[]');
+  let dateValid   = false;
+
+  // Normalize any reasonable date input to M/D/YYYY
+  // Accepts: 3/26/2026, 3-26-2026, 03/26/2026, 03-26-2026, 3.26.2026
+  function normalizeDate(raw) {
+    const cleaned = raw.trim().replace(/[-.\s]/g, '/');
+    const parts = cleaned.split('/');
+    if (parts.length !== 3) return null;
+    const m = parseInt(parts[0], 10);
+    const d = parseInt(parts[1], 10);
+    const y = parseInt(parts[2], 10);
+    if (isNaN(m) || isNaN(d) || isNaN(y)) return null;
+    if (m < 1 || m > 12) return null;
+    if (d < 1 || d > 31) return null;
+    if (y < 2000 || y > 2100) return null;
+    return `${m}/${d}/${y}`;
+  }
+
+  function validateDate() {
+    const raw = dateField.value;
+    if (!raw.trim()) {
+      dateField.classList.remove('invalid');
+      dateHint.textContent = 'Format: M/D/YYYY';
+      dateHint.classList.remove('err');
+      dateValid = false;
+      return null;
+    }
+    const normalized = normalizeDate(raw);
+    if (!normalized) {
+      dateField.classList.add('invalid');
+      dateHint.textContent = 'Use M/D/YYYY — e.g. 3/26/2026';
+      dateHint.classList.add('err');
+      dateValid = false;
+      return null;
+    }
+    // Auto-correct the field to normalized form
+    dateField.value = normalized;
+    dateField.classList.remove('invalid');
+    dateHint.textContent = 'Format: M/D/YYYY';
+    dateHint.classList.remove('err');
+    dateValid = true;
+    return normalized;
+  }
+
+  function checkReady() {
+    submitBtn.disabled = !nameField.value || !dateValid || !teamsField.value.trim();
+  }
+
+  function showSetup() {
+    setupView.classList.add('active');
+    mainView.classList.remove('active');
+    urlInput.value = scriptUrl;
+    saveBtn.disabled = !scriptUrl.trim();
+  }
+
+  function showMain() {
+    setupView.classList.remove('active');
+    mainView.classList.add('active');
+    dateField.value = todayStr;
+    validateDate();
+    checkReady();
+    renderSubs();
+  }
+
+  function renderSubs() {
+    if (!submissions.length) { subsSection.style.display = 'none'; return; }
+    subsSection.style.display = 'block';
+    subsGrid.innerHTML = submissions.slice(0, 12).map(s => `
+      <div class="person-card">
+        <p class="person-name">${s.name}</p>
+        <p class="person-date">${s.date}</p>
+        ${s.teams.map(t => `<p class="team-item">${t}</p>`).join('')}
+      </div>
+    `).join('');
+  }
+
+  function setStatus(el, type, msg) {
+    el.className = 'status ' + type;
+    el.textContent = msg;
+  }
+
+  urlInput.addEventListener('input', () => { saveBtn.disabled = !urlInput.value.trim(); });
+
+  saveBtn.addEventListener('click', () => {
+    const url = urlInput.value.trim();
+    if (!url) return;
+    localStorage.setItem(SCRIPT_URL_KEY, url);
+    scriptUrl = url;
+    showMain();
+  });
+
+  changeUrlBtn.addEventListener('click', showSetup);
+  nameField.addEventListener('change', checkReady);
+  teamsField.addEventListener('input', checkReady);
+
+  dateField.addEventListener('input', () => {
+    validateDate();
+    checkReady();
+  });
+
+  dateField.addEventListener('blur', () => {
+    validateDate();
+    checkReady();
+  });
+
+  submitBtn.addEventListener('click', async () => {
+    const name     = nameField.value;
+    const date     = validateDate();
+    const teamList = teamsField.value.split('\n').map(t => t.trim()).filter(Boolean);
+    if (!name || !date || !teamList.length) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
+    setStatus(submitStatus, '', '');
+
+    try {
+      await fetch(scriptUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, name, teams: teamList })
+      });
+
+      submissions = [{ name, date, teams: teamList }, ...submissions].slice(0, 20);
+      localStorage.setItem(SUBS_KEY, JSON.stringify(submissions));
+      renderSubs();
+      teamsField.value = '';
+      checkReady();
+      setStatus(submitStatus, 'ok', 'Sent to the sheet!');
+    } catch (err) {
+      setStatus(submitStatus, 'err', 'Could not reach the sheet. Check your URL and internet connection.');
+    }
+
+    submitBtn.textContent = 'Submit to sheet';
+  });
+
+  scriptUrl ? showMain() : showSetup();
+</script>
+</body>
+</html>
